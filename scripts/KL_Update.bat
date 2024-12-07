@@ -27,7 +27,7 @@ IF EXIST rsrc IF EXIST scenes IF EXIST code\projectx-pcode.jar (
     SET gamepath="%cd%"
     SET /A gamepathfailsafe=1
     GOTO Install 
-    )
+)
 
 :: Check if SK could've been installed anywhere. 
 :: If not, prompt the user to manually enter the SK folder path and skip detection.
@@ -122,72 +122,74 @@ SETLOCAL disabledelayedexpansion
 SET /A gamepathfailsafe=1
 
 :Install
-IF %gamepathfailsafe% EQU 0 (
-    ECHO Unable to find Spiral Knights' folder.
-    SET /P gamepath=Run the script inside it or please enter its path:   
-) 
-IF NOT EXIST %gamepath%\rsrc ( 
-	IF NOT EXIST %gamepath%\scenes (
-		IF NOT EXIST %gamepath%\code\projectx-pcode.jar (
-    		SET /A gamepathfailsafe=0
-    	)	
-    )		
-)
+    IF %gamepathfailsafe% EQU 0 (
+        ECHO Unable to find Spiral Knights' folder.
+        SET /P gamepath=Run the script inside it or please enter its path:   
+    ) 
+    IF NOT EXIST %gamepath%\rsrc ( 
+	    IF NOT EXIST %gamepath%\scenes (
+		    IF NOT EXIST %gamepath%\code\projectx-pcode.jar (
+    		    SET /A gamepathfailsafe=0
+    	    )	
+        )		
+    )
 
-:: Simple asking for confirmation, just in case.
-%gamepath:~1,2%
-SET buff=false
-CD "%gamepath%"
-ECHO KnightLauncher will be installed/updated in this folder: %gamepath%
-SET /P opt=Would you like to proceed? (Y/N) 
-IF /I %opt% EQU y ( SET buff=true )
-IF /I %opt% EQU yes ( SET buff=true )
-IF /I %buff% NEQ true ( EXIT /b )
+    REM Simple asking for confirmation, just in case.
+    %gamepath:~1,2%
+    SET buff=false
+    CD "%gamepath%"
+    ECHO KnightLauncher will be installed/updated in this folder: %gamepath%
+    SET /P opt=Would you like to proceed? (Y/N) 
+    IF /I %opt% EQU y ( SET buff=true )
+    IF /I %opt% EQU yes ( SET buff=true )
+    IF /I %buff% NEQ true ( EXIT /b )
 
-:: Check if Java is properly installed. Download and install if it's not.
-SETLOCAL EnableDelayedExpansion
-javaw >nul 2>&1!
-IF "%errorlevel%" EQU "9009" (
-    ECHO You need Java installed on your machine to use KnightLauncher.
-	IF NOT EXIST jre_kl.exe (
-		ECHO Downloading...
-		ECHO %separator%
-		curl.exe !javaurl! -o !javafname! -L
-		ECHO %separator%
-		ECHO Success. 
-	)
-    ECHO Please proceed with the installation. The script will restart itself afterwards.
-    PING -n 4 127.0.0.1>nul
-    !javafname!
-    START KL_Update.bat & EXIT
-)
-DEL !javafname!
-SETLOCAL DisableDelayedExpansion
+    REM Check if Java is properly installed. Download and install if it's not.
+    SETLOCAL EnableDelayedExpansion
+    javaw >nul 2>&1!
+    IF "%errorlevel%" EQU "9009" (
+        ECHO You need Java installed on your machine to use KnightLauncher.
+	    IF NOT EXIST jre_kl.exe (
+		    ECHO Downloading...
+		    ECHO %separator%
+		    curl.exe !javaurl! -o !javafname! -L
+		    ECHO %separator%
+		    ECHO Success. 
+	    )
+        ECHO Please proceed with the installation. The script will restart itself afterwards.
+        PING -n 4 127.0.0.1>nul
+        !javafname!
+        START KL_Update.bat & EXIT
+    )
+    DEL /F /Q !javafname!
+    SETLOCAL DisableDelayedExpansion
 
-:: Checking if other versions are installed.
-:: If there are - remove them retaining "KnightLauncher.properties".
-:: Also trying to kill the KnightLauncher process just in case.
-IF EXIST *KnightLauncher* ( 
-    ECHO Detected other version installed, removing...
-    TASKKILL /IM javaw.exe >nul 2>&1!
-    IF EXIST KnightLauncher.properties ( REN KnightLauncher.properties move.properties)
-    DEL *KnightLauncher*
-    IF EXIST move.properties ( REN move.properties KnightLauncher.properties )
+    REM Checking if other versions are installed.
+    REM If there are - remove them retaining "KnightLauncher.properties".
+    REM Also trying to kill the KnightLauncher process just in case.
+    IF EXIST *KnightLauncher* ( 
+        ECHO Detected other version installed, removing...
+        TASKKILL /IM javaw.exe >nul 2>&1!
+        IF EXIST KnightLauncher.properties ( REN KnightLauncher.properties move.properties)
+        DEL *KnightLauncher*
+        IF EXIST move.properties ( REN move.properties KnightLauncher.properties )
+        ECHO Success!
+    )
+
+    REM Preparing installation info.
+    ECHO Downloading...
+    curl.exe -sSL %api_url% | findstr browser_download_url > temp 
+    SET /P url=<temp
+    DEL temp
+    SET url=%url:"=%
+    SET url=%url:      browser_download_url: =%
+
+    REM Downloading, installing and running the new version.
+    REM NOTE: If "tar" fails - update to Windows 10, or update your Windows 10. Build 17063 at least.
+    ECHO %separator%
+    curl.exe %url% -o %filename% -L
+    ECHO %separator%
+    tar -xf %filename% & DEL %filename% & KnightLauncher_windows.bat
     ECHO Success!
-)
 
-:: Preparing installation info.
-ECHO Downloading...
-curl.exe -sSL %api_url% | findstr browser_download_url > temp 
-SET /P url=<temp
-DEL temp
-SET url=%url:"=%
-SET url=%url:      browser_download_url: =%
-
-:: Downloading, installing and running the new version.
-:: NOTE: If "tar" fails - update to Windows 10, or update your Windows 10. Build 17063 at least.
-ECHO %separator%
-curl.exe %url% -o %filename% -L
-ECHO %separator%
-tar -xf %filename% & DEL %filename% & KnightLauncher_windows.bat
-ECHO Success!
+exit /b 0
